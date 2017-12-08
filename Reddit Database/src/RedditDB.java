@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Scanner;
 
+
 import org.json.*;
 
 public class RedditDB
@@ -51,19 +52,24 @@ public class RedditDB
 		Scanner scan;
 		try {
 			scan = new Scanner(file);
+			long start = System.currentTimeMillis();
+			int counter = 0;
 			while(scan.hasNextLine()){
 				JSONObject jsObj = new JSONObject(scan.nextLine());
 																	//(id string, parent_id string, link_id string, name string, author string, body string, subreddit_id string, subreddit string, score integer, created_utc integer)
 				String str = "insert into comment values(" + "'" + jsObj.getString("id") + "'"  + ","
 						+ "'"+ jsObj.getString("parent_id")+ "'"+ "," + "'"+ jsObj.getString("link_id")+ "'"+ ","
 						+ "'"+ jsObj.getString("name")+ "'"+ ","+ "'"+ jsObj.getString("author")+ "'"+ ","
-						+ "'"+ jsObj.getString("body")+ "'"+ ","+ "'"+ jsObj.getString("subreddit_id")+ "'"+ ","
+						+ "'"+ "body"+ "'"+ ","+ "'"+ jsObj.getString("subreddit_id")+ "'"+ ","
 						+ "'"+ jsObj.getString("subreddit")+ "'"+ ","+ jsObj.getInt("score")+ ","
 					+ jsObj.getInt("created_utc") + ")";
-				System.out.println(str);
+				System.out.println(++counter);
 				statement.executeUpdate(str);
 			}
 			scan.close();
+			long end = System.currentTimeMillis();
+			
+			System.out.println(end-start + " ms " + (end-start)/1000 + " s " +(end-start)/60000 + " min ");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
