@@ -21,15 +21,30 @@ public class RedditDB
 		try
 		{
 			// create a database connection
-			connection = DriverManager.getConnection("jdbc:sqlite:reddit.db");
+			connection = DriverManager.getConnection("jdbc:sqlite:reddit.db"+
+			        "&rewriteBatchedStatements=true");
 			Statement statement = connection.createStatement();
 			
 			statement.setQueryTimeout(30);  // set timeout to 30 sec.
 
 			statement.executeUpdate("drop table if exists comment");
 			statement.executeUpdate("create table comment (id string, parent_id string, link_id string, name string, author string, body string, subreddit_id string, subreddit string, score integer, created_utc integer)");
+			
+			// Alternative scheme with constraints
+			/*statement.executeUpdate("create table comment ("
+					+ "id string NOT NULL UNIQUE"
+					+ ", parent_id string NOT NULL"
+					+ ", link_id string NOT NULL"
+					+ ", name string NOT NULL"
+					+ ", author string NOT NULL"
+					+ ", body string NOT NULL"
+					+ ", subreddit_id string NOT NULL"
+					+ ", subreddit string NOT NULL"
+					+ ", score integer NOT NULL"
+					+ ", created_utc integer NOT NULL)");*/
+			
 			PreparedStatement ps = connection.prepareStatement("INSERT INTO comment VALUES (?,?,?,?,?,?,?,?,?,?)");
-			loadFileBufferedReaderStringBuilder("RC_2007-10.json", ps);
+			loadFileBufferedReaderStringBuilder("C:\\Users\\emile\\Documents\\Java\\Databasteori-assignment-2\\RC_2007-10.json", ps);
 			ResultSet rs = statement.executeQuery("select * from comment limit 10");
 			while (rs.next()) {
 				System.out.println("id = " + rs.getString("id"));
@@ -119,12 +134,12 @@ public class RedditDB
 				ps.setInt(9, jsObj.getInt("score"));
 				ps.setInt(10, jsObj.getInt("created_utc"));
 				ps.addBatch();
-				/*if((counter % 10000) == 0)
+				if((counter % 10000) == 0)
 		        {
 		            System.out.println(counter);
 		            ps.executeBatch();
 		            ps.clearBatch();
-		        }*/
+		        }
 			}
 			ps.executeBatch();
             ps.clearBatch();
