@@ -21,17 +21,17 @@ public class RedditDB
 		try
 		{
 			// create a database connection
-			connection = DriverManager.getConnection("jdbc:sqlite:reddit.db"+
-			        "&rewriteBatchedStatements=true");
+			connection = DriverManager.getConnection("jdbc:sqlite:reddit.db");
+			
 			Statement statement = connection.createStatement();
 			
 			statement.setQueryTimeout(30);  // set timeout to 30 sec.
-
+			/*
 			statement.executeUpdate("drop table if exists comment");
 			statement.executeUpdate("create table comment (id string, parent_id string, link_id string, name string, author string, body string, subreddit_id string, subreddit string, score integer, created_utc integer)");
 			
 			// Alternative scheme with constraints
-			/*statement.executeUpdate("create table comment ("
+			statement.executeUpdate("create table comment ("
 					+ "id string NOT NULL UNIQUE"
 					+ ", parent_id string NOT NULL"
 					+ ", link_id string NOT NULL"
@@ -41,23 +41,59 @@ public class RedditDB
 					+ ", subreddit_id string NOT NULL"
 					+ ", subreddit string NOT NULL"
 					+ ", score integer NOT NULL"
-					+ ", created_utc integer NOT NULL)");*/
+					+ ", created_utc integer NOT NULL)");
 			
 			PreparedStatement ps = connection.prepareStatement("INSERT INTO comment VALUES (?,?,?,?,?,?,?,?,?,?)");
-			loadFileBufferedReaderStringBuilder("C:\\Users\\emile\\Documents\\Java\\Databasteori-assignment-2\\RC_2007-10.json", ps);
-			ResultSet rs = statement.executeQuery("select * from comment limit 10");
+			loadFileBufferedReaderStringBuilder("C:\\Users\\emile\\Documents\\Java\\Databasteori-assignment-2\\RC_2007-10.json", ps);*/
+			
+			// 5.1
+			ResultSet rs = statement.executeQuery("select count(*) from comment WHERE author = 'igiveyoumylife'"); 
+			System.out.println(rs.getInt(1)); 
+			
+			// 5.2
+			rs = statement.executeQuery("select count(*) from comment where subreddit_id = 't5_6' and created_utc > 1193616000 and created_utc < 1193702399"); 
+			System.out.println(rs.getInt(1)); // --> 5971 
+			
+			// 5.3
+			rs = statement.executeQuery("SELECT COUNT(*) FROM comment WHERE body LIKE '% lol %'");
+			System.out.println(rs.getInt(1));
+			
+			// 5.4
+			rs = statement.executeQuery("SELECT distinct subreddit, author FROM comment WHERE author IN (SELECT author FROM comment WHERE link_id = 't3_2zxms') order by author asc ");  
+			while (rs.next()) {  
+			 System.out.print(rs.getString("subreddit"));  
+			 System.out.println(" author:"+rs.getString("author"));  
+			} 
+			
+			// 5.5
+			rs = statement.executeQuery("select author, score from (select sum(score) as 'Score', author from comment group by author order by score desc limit 1)"
+					+ " union all"
+					+ " select author, score from (select sum(score) as 'Score', author from comment group by author order by score asc limit 1)");
 			while (rs.next()) {
-				System.out.println("id = " + rs.getString("id"));
-				System.out.println("name = " + rs.getString("parent_id"));
-				System.out.println("name = " + rs.getString("link_id"));
-				System.out.println("name = " + rs.getString("name"));
-				System.out.println("name = " + rs.getString("author"));
-				System.out.println("name = " + rs.getString("body"));
-				System.out.println("name = " + rs.getString("subreddit_id"));
-				System.out.println("name = " + rs.getString("subreddit"));
-				System.out.println("name = " + rs.getInt("score"));
-				System.out.println("name = " + rs.getInt("name"));
+				System.out.println(rs.getString("author") + " " + rs.getString("score"));
 			}
+			
+			// 5.6
+			rs = statement.executeQuery("select subreddit, score from (select sum(score) as 'Score', subreddit from comment group by subreddit order by score desc limit 1)"
+					+ " union all"
+					+ " select subreddit, score from (select sum(score) as 'Score', subreddit from comment group by subreddit order by score asc limit 1)");
+			while (rs.next()) {
+				System.out.println(rs.getString("subreddit") + " " + rs.getString("score"));
+			}
+			
+			// 5.7
+			rs = statement.executeQuery("SELECT  distinct author FROM comment WHERE link_id in( SELECT distinct link_id FROM comment WHERE author = 'igiveyoumylife') "); 
+			while (rs.next()) { 
+				System.out.println("Author: "+rs.getString("author")); 
+			}
+			
+			// 5.8
+			rs = statement.executeQuery("select author, subreddit from comment group by author having count(distinct  subreddit) = 1"); 
+			while (rs.next()) { 
+				System.out.print("Author: "+rs.getString("author")); 
+				System.out.println(" only subreddit commited to: "+rs.getString("subreddit")); 
+			}
+			
 			System.out.println("done!");
 		}
 		catch(SQLException e)
