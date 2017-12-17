@@ -8,6 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Scanner;
 
 
@@ -15,24 +18,24 @@ import org.json.*;
 
 public class RedditDB
 {
-	public static void main(String[] args)
+	public static void main(String[] args) throws ParseException
 	{
 		Connection connection = null;
 		try
 		{
 			// create a database connection
-			connection = DriverManager.getConnection("jdbc:sqlite:reddit.db");
+			connection = DriverManager.getConnection("jdbc:sqlite:reddit2011-07-1.1.db");
 			
 			Statement statement = connection.createStatement();
-			
+			connection.setAutoCommit(false);
 			statement.setQueryTimeout(30);  // set timeout to 30 sec.
-			/*
+			
 			statement.executeUpdate("drop table if exists comment");
 			statement.executeUpdate("create table comment (id string, parent_id string, link_id string, name string, author string, body string, subreddit_id string, subreddit string, score integer, created_utc integer)");
 			
 			// Alternative scheme with constraints
-			statement.executeUpdate("create table comment ("
-					+ "id string NOT NULL UNIQUE"
+			/*statement.executeUpdate("create table comment ("
+					+ "id string NOT NULL UNIQUE PRIMARY KEY"
 					+ ", parent_id string NOT NULL"
 					+ ", link_id string NOT NULL"
 					+ ", name string NOT NULL"
@@ -41,13 +44,21 @@ public class RedditDB
 					+ ", subreddit_id string NOT NULL"
 					+ ", subreddit string NOT NULL"
 					+ ", score integer NOT NULL"
-					+ ", created_utc integer NOT NULL)");
+					+ ", created_utc integer NOT NULL)");*/
 			
 			PreparedStatement ps = connection.prepareStatement("INSERT INTO comment VALUES (?,?,?,?,?,?,?,?,?,?)");
-			loadFileBufferedReaderStringBuilder("C:\\Users\\emile\\Documents\\Java\\Databasteori-assignment-2\\RC_2007-10.json", ps);*/
+			loadFileBufferedReaderStringBuilder("C:\\Users\\emile\\Desktop\\databas\\RC_2011-07.json", ps);
+			
+			// UTC epoch second converter
+			/*String str = "Jun 13 2003 23:11:52 UTC";
+		    SimpleDateFormat df = new SimpleDateFormat("MMM dd yyyy HH:mm:ss.SSS zzz");
+		    Date date = df.parse(str);
+		    long epoch = date.getTime();
+		    System.out.println(epoch); // 1055545912454
+			*/
 			
 			// 5.1
-			ResultSet rs = statement.executeQuery("select count(*) from comment WHERE author = 'igiveyoumylife'"); 
+			ResultSet rs = statement.executeQuery("select count(*) from comment WHERE author = 'matts2'"); 
 			System.out.println(rs.getInt(1)); 
 			
 			// 5.2
@@ -116,39 +127,6 @@ public class RedditDB
 			}
 		}
 	}
-	private static void loadFileScannerConcatenation(String path, Statement statement){
-		File file = new File(path);
-		Scanner scan;
-		try {
-			scan = new Scanner(file);
-			long start = System.currentTimeMillis();
-			int counter = 0;
-			while(scan.hasNextLine()){
-				System.out.println(++counter);
-				JSONObject jsObj = new JSONObject(scan.nextLine());
-				//(id string, parent_id string, link_id string, name string, author string, body string, subreddit_id string, subreddit string, score integer, created_utc integer)
-				statement.executeUpdate("INSERT INTO comment VALUES ('id'");
-				
-				String str = "insert into comment values(" + "'" + jsObj.getString("id") + "'"  + ","
-						+ "'"+ jsObj.getString("parent_id")+ "'"+ "," + "'"+ jsObj.getString("link_id")+ "'"+ ","
-						+ "'"+ jsObj.getString("name")+ "'"+ ","+ "'"+ jsObj.getString("author")+ "'"+ ","
-						+ "'"+ "body"+ "'"+ ","+ "'"+ jsObj.getString("subreddit_id")+ "'"+ ","
-						+ "'"+ jsObj.getString("subreddit")+ "'"+ ","+ jsObj.getInt("score")+ ","
-						+ jsObj.getInt("created_utc") + ")";
-				statement.executeUpdate(str);
-			}
-			scan.close();
-			long end = System.currentTimeMillis();
-
-			System.out.println(end-start + " ms " + (end-start)/1000 + " s " +(end-start)/60000 + " min ");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 	private static void loadFileBufferedReaderStringBuilder(String path, PreparedStatement ps){
 		try{
 			BufferedReader br = new BufferedReader(new FileReader(path));
@@ -156,9 +134,9 @@ public class RedditDB
 			long start = System.currentTimeMillis();
 			int counter = 0;
 			while((line = br.readLine())!= null){
-				System.out.println(++counter);
+				
 				JSONObject jsObj = new JSONObject(line);
-
+				++counter;
 				ps.setString(1, jsObj.getString("id"));
 				ps.setString(2, jsObj.getString("parent_id"));
 				ps.setString(3, jsObj.getString("link_id"));
@@ -170,15 +148,18 @@ public class RedditDB
 				ps.setInt(9, jsObj.getInt("score"));
 				ps.setInt(10, jsObj.getInt("created_utc"));
 				ps.addBatch();
-				if((counter % 10000) == 0)
-		        {
-		            System.out.println(counter);
-		            ps.executeBatch();
+				
+				if ((counter % 10000) == 0) {
+					System.out.println(counter);
+					ps.executeBatch();
+					ps.getConnection().commit();
 		            ps.clearBatch();
-		        }
+				}
 			}
 			ps.executeBatch();
+			ps.getConnection().commit();
             ps.clearBatch();
+            
 			br.close();
 			long end = System.currentTimeMillis();
 
